@@ -55,8 +55,8 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 				toRemove.add(t);
 			}
 		}
-		for (int i = 0; i < toRemove.size(); i++) {
-			transitions.remove(toRemove.get(i));
+		for (int ii = 0; ii < toRemove.size(); ii++) {
+			transitions.remove(toRemove.get(ii));
 		}
 		states.remove(s);
 	}
