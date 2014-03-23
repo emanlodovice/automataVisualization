@@ -87,8 +87,7 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 				}
 			}
 			same.label += ","+label;
-		}
-		System.out.println(transitions.size());
+		}		
 	}
 	
 	public void paintComponent(Graphics g) {	

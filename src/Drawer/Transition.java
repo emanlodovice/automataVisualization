@@ -65,46 +65,31 @@ public class Transition {
 		return end;
 	}
 	
-	private void updatePoints() {
-		if (end != null) {
+	private void updatePoints() {		
+		if (end != null && end != start) {			
 			endX = end.x;
-			endY = end.y;		
-			int xDif = endX - start.x;
-			if (Math.abs(xDif) > DrawingArea.RADIUS) {
-				if (xDif > 0) {
-					endX -= DrawingArea.RADIUS/1.2;
-				}	else {
-					endX += DrawingArea.RADIUS/1.2;
-				}
+			endY = end.y;			
+			double angle = Solver.solveAngle(endX-start.x, start.y-endY);
+			double hype = Solver.solveHyp(start.x, start.y, endX, endY)-DrawingArea.RADIUS;			
+			double adj = Solver.solveAdj(angle, hype);
+			double opp = Solver.solveOpp(angle, hype);			
+			if (start.x > endX) {
+				adj *= -1;
+				opp *= -1;
 			}
-			int yDif = endY - start.y;
-			if (Math.abs(yDif) > DrawingArea.RADIUS) {
-				if (yDif > 0) {
-					endY -= DrawingArea.RADIUS/1.2;
-				}	else {
-					endY += DrawingArea.RADIUS/1.2;
-				}
-			}
+			endX = start.x + (int)adj;
+			endY = start.y - (int)opp;
 		}		
 		
-		int xDifE = endX - start.x;
-		if (Math.abs(xDifE) > DrawingArea.RADIUS) {
-			startX = start.x;
-			if (xDifE > 0) {				
-				startX += DrawingArea.RADIUS/1.2;
-			}	else {
-				startX -= DrawingArea.RADIUS/1.2;
-			}
+		double angle = Solver.solveAngle(endX-start.x, start.y-endY);									
+		double adj = Solver.solveAdj(angle, DrawingArea.RADIUS);
+		double opp = Solver.solveOpp(angle, DrawingArea.RADIUS);			
+		if (start.x > endX) {
+			adj *= -1;
+			opp *= -1;
 		}
-		int yDifE = endY - start.y;
-		if (Math.abs(yDifE) > DrawingArea.RADIUS) {
-			startY = start.y;
-			if (yDifE > 0) {
-				startY += DrawingArea.RADIUS/2;
-			}	else {
-				startY -= DrawingArea.RADIUS/2;
-			}
-		}
+		startX = (int) (start.x + adj);
+		startY = (int) (start.y - opp);
 		textX = startX + ((endX-startX)/2);
 		textY = startY + ((endY-startY)/2);
 		if (start == end) {
