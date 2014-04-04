@@ -1,56 +1,171 @@
 package Drawer;
 
-import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.GridLayout;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.util.ArrayList;
 
+import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
 import javax.swing.event.MouseInputListener;
+
+import DrawerRegEx.StateParsers;
+
+import core.Machine;
 
 public class DrawingArea extends JPanel implements MouseInputListener {
 		
 	public final static int RADIUS = 20;
-	private ArrayList<State> states;
-	private ArrayList<Transition> transitions;
+	private ArrayList<DState> states;
+	private ArrayList<DTransition> transitions;
 	private int height;
 	private int width;
 	private int prevX;
 	private int prevY;
-	private State currentState;	
-	private Transition currentTransition;
+	private DState currentState;	
+	private DTransition currentTransition;
 	private int toDraw;
 	public final static Font font = new Font("Arial", 1, 12);
+	private JPopupMenu stateOptions;
+	private JButton setStartState;
+	private JButton setFinalState;
+	private JButton reset;
+	private String message;
 	
 	public DrawingArea() {
 		initialize();
 	}
 	
+	public void initMach(String regEx) {
+		Machine regx = new Machine(regEx);
+		transitions = new ArrayList<DTransition>();
+		StateParsers mParsers = new StateParsers(regx.states,this, regx.startingState);
+		states = mParsers.state;		
+//		transitions = mParsers.transitions;
+		repaint();
+	}
+	
+	public void initMach(Machine regx) {		
+		transitions = new ArrayList<DTransition>();
+		StateParsers mParsers = new StateParsers(regx.states,this, regx.startingState);
+		states = mParsers.state;		
+//		transitions = mParsers.transitions;
+		repaint();
+	}
+	
+	public ArrayList<DState> getStates() {
+		return states;
+	}
+	
+	public void setStates(ArrayList<DState> s) {
+		states = s;
+	}
+	
+	public ArrayList<DTransition> getTransitions() {
+		return transitions;
+	}
+	
+	public void setTransitions(ArrayList<DTransition> t) {
+		transitions = t;
+	}
+	
 	private void initialize() {
+		message = "";
 		setToolTipText("Click to draw Something");			
 		setPreferredSize(new Dimension(600,600));		
-		states = new ArrayList<State>();
-		transitions = new ArrayList<Transition>();
+		states = new ArrayList<DState>();
+		transitions = new ArrayList<DTransition>();
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		width = 600;
 		height = 600;
 		toDraw = Action.DRAWSTATE;
+		stateOptions = new JPopupMenu();
+		JPanel menu = new JPanel(new GridLayout(3, 1));
+		setStartState = new JButton("Start");
+		setFinalState = new JButton("Final");
+		reset = new JButton("Reset");
+		menu.add(setStartState);
+		menu.add(setFinalState);
+		menu.add(reset);
+		stateOptions.add(menu);
+		
+		MouseListener m = new MouseListener() {			
+			@Override
+			public void mouseReleased(MouseEvent arg0) {
+				// TODO Auto-generated method stub				
+			}
+			
+			@Override
+			public void mousePressed(MouseEvent arg0) {
+				// TODO Auto-generated method stub				
+			}
+			
+			@Override
+			public void mouseExited(MouseEvent arg0) {
+				// TODO Auto-generated method stub				
+			}
+			
+			
+			@Override
+			public void mouseEntered(MouseEvent arg0) {
+				// TODO Auto-generated method stub				
+			}
+			
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getSource() == setStartState) {
+					resetAllStartState();
+					currentState.start = true;
+					ArrayList<DState> temp = new ArrayList<>();
+					temp.add(currentState);
+					for (int i = 0; i < states.size(); i++) {
+						if (states.get(i) != currentState) {
+							temp.add(states.get(i));
+						}
+					}
+					states = temp;
+					stateOptions.setVisible(false);					
+				}	else if (e.getSource() == setFinalState) {
+					currentState.fin = true;
+					stateOptions.setVisible(false);					
+				}	else {
+					currentState.start = false;
+					currentState.fin = false;
+					stateOptions.setVisible(false);					
+				}								
+				new Thread(new UpdateState()).start();				
+			}
+		};
+		
+		setStartState.addMouseListener(m);
+		setFinalState.addMouseListener(m);
+		reset.addMouseListener(m);		
+		setStartState.addMouseListener(m);
 	}
 	
 	public void changeAction(int action) {
-		toDraw = action;		
+		toDraw = action;	
+		if (toDraw == Action.DELETE) {			
+			setCursor(new Cursor(Cursor.HAND_CURSOR));
+		}	else if (toDraw == Action.EDIT) {
+			setCursor(new Cursor(Cursor.MOVE_CURSOR));
+		}   else {		
+			setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
+		}
 	}
 	
-	private void deleteState(State s) {
-		ArrayList<Transition> toRemove = new ArrayList<Transition>();
+	private void deleteState(DState s) {
+		ArrayList<DTransition> toRemove = new ArrayList<DTransition>();
 		for (int i = 0; i < transitions.size(); i++) {
-			Transition t = transitions.get(i);
+			DTransition t = transitions.get(i);
 			if (t.getStart() == s || t.getEnd() == s) {
 				toRemove.add(t);
 			}
@@ -61,50 +176,55 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 		states.remove(s);
 	}
 	
-	private void addState(State s) {
+	private void addState(DState s) {
 		states.add(s);
 	}
 	
-	private void deleteTransition(Transition t) {
+	private void deleteTransition(DTransition t) {
+		int index = getOppositeTransition(t.getStart(), t.getEnd());
+		if (index >= 0) {
+			transitions.get(index).style = 0;
+		}
 		transitions.remove(t);
 	}
 	
-	private void addTransition(Transition t, String label) {
+	public void addTransition(DTransition t, String label) {		
 		label = label.trim();
 		int i = transitions.indexOf(t);
-		if (i < 0) {
+		if (i < 0) {			
 			if (label.length() <= 0) {
 				label = "e";
 			}
-			t.label = label;
+			t.setLabel(label);			
+			int j = this.getOppositeTransition(t.getStart(), t.getEnd());
+			if (j >= 0) {
+				transitions.get(j).style = 1;
+				t.style = 2;				
+			}			
 			transitions.add(t);
 		}	else {
-			Transition same = transitions.get(i);
-			String[] chars = same.label.split(",");
+			DTransition same = transitions.get(i);
+			String[] chars = same.getLabel().split(",");
 			for (int j = 0; j < chars.length; j++) {
 				if (label.contentEquals(chars[j])) {
 					return;
 				}
 			}
-			same.label += ","+label;
-		}		
+			same.setLabel(same.getLabel() + "," + label);
+		}
 	}
 	
-	public void paintComponent(Graphics g) {	
+	public void paintComponent(Graphics g) {			
 		super.paintComponent(g);
-		this.drawStates(g);
 		this.drawTransitions(g);
+		this.drawStates(g);		
+		g.drawString(message, 10, 10);
 	}
 	
 	private void drawStates(Graphics g) {
 		g.setFont(font);
 		for (int i = 0; i < states.size(); i++) {
-			states.get(i).draw(g, i+1);									
-//			try {				
-//				g.drawImage(ImageIO.read(getClass().getResource("state.png")), s.x-RADIUS,s.y-RADIUS, RADIUS*2,RADIUS*2,this);
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}			
+			states.get(i).draw(g, i+1);										
 		}
 		if (currentState != null && toDraw == Action.DRAWSTATE) {
 			currentState.draw(g, 0);
@@ -113,7 +233,7 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 	
 	private void drawTransitions(Graphics g) {
 		for (int i = 0; i < transitions.size(); i++) {
-			Transition t = transitions.get(i);
+			DTransition t = transitions.get(i);
 			t.draw(g);
 		}
 		if (currentTransition != null) {
@@ -169,52 +289,65 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 		switch(toDraw) {
 		case Action.DRAWSTATE:
 			if (SwingUtilities.isLeftMouseButton(e)) {
-				currentState = new State(e.getX(), e.getY());				
+				currentState = new DState(e.getX(), e.getY());				
 				new Thread(new UpdateState()).start();				
 			}
 			break;
 		case Action.DRAWLINE:			
 			if (SwingUtilities.isLeftMouseButton(e)) {
-				State s = getHitState(e.getX(), e.getY());
+				DState s = getHitState(e.getX(), e.getY());
 				if (s != null) {					
-					currentTransition = new Transition(s);
+					currentTransition = new DTransition(s);
 					new Thread(new UpdateState()).start();
 				}
 			}
 			break;
 		case Action.EDIT:			
-			if (SwingUtilities.isLeftMouseButton(e)) {
+			if (SwingUtilities.isLeftMouseButton(e)) {				
 				currentState = getHitState(e.getX(), e.getY());
 				if (currentState != null) {
 					prevX = currentState.x;
 					prevY = currentState.y;
+				} 
+				currentTransition = getHitTransition(e.getX(), e.getY());
+				if (currentTransition != null) {
+					String newLabel = JOptionPane.showInputDialog("Symbols", currentTransition.getLabel());					
+					if (newLabel != null) {
+						currentTransition.setLabel(newLabel);
+						new Thread(new UpdateState()).start();
+					}
+				}
+			} else if (SwingUtilities.isRightMouseButton(e)) {
+				currentState = getHitState(e.getX(), e.getY());
+				if (currentState != null) {					
+					stateOptions.show(e.getComponent(), e.getX(), e.getY());									
 				}
 			}
 			break;
 		case Action.DELETE:
-			State toDelete = getHitState(e.getX(), e.getY());
+			DState toDelete = getHitState(e.getX(), e.getY());
 			if (toDelete != null) {
 				deleteState(toDelete);
 				new Thread(new UpdateState()).start();
 				return;
 			}
-			Transition t = getHitTransition(e.getX(), e.getY());
+			DTransition t = getHitTransition(e.getX(), e.getY());
 			if (t != null) {
 				deleteTransition(t);
-				new Thread(new UpdateState()).start();
-				return;
+				new Thread(new UpdateState()).start();				
 			}
 			break;
 		default:
 			break;
 		}
+		new Thread(new UpdateState()).start();
 	}
 
 	@Override
 	public void mouseReleased(MouseEvent e) {
 		switch(toDraw) {
 		case Action.DRAWSTATE:
-			if (SwingUtilities.isLeftMouseButton(e)) {
+			if (SwingUtilities.isLeftMouseButton(e) && currentState != null) {
 				if (currentState.x-RADIUS < 0 || currentState.y-RADIUS < 0) {
 					new Thread(new UpdateState()).start();
 					currentState = null;
@@ -233,8 +366,7 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 					setPreferredSize(new Dimension(width, height));
 					this.getParent().revalidate();
 				}
-				if ((currentState.y+RADIUS+100) > height) {
-					System.out.println("resize");
+				if ((currentState.y+RADIUS+100) > height) {					
 					height +=50;
 					setPreferredSize(new Dimension(width, height));
 					this.getParent().revalidate();
@@ -253,7 +385,7 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 					return;
 				}
 				for (int i = 0; i < states.size(); i++) {
-					State s = states.get(i);
+					DState s = states.get(i);
 					if (s != currentState && s.overlaps(currentState)) {
 						currentState.x = prevX;
 						currentState.y = prevY;
@@ -267,23 +399,25 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 					setPreferredSize(new Dimension(width, height));
 					this.getParent().revalidate();
 				}
-				if ((currentState.y+RADIUS+100) > height) {
-					System.out.println("resize");
+				if ((currentState.y+RADIUS+100) > height) {					
 					height +=50;
 					setPreferredSize(new Dimension(width, height));
 					this.getParent().revalidate();
 				}
 				currentState = null;
 				new Thread(new UpdateState()).start();
-			}
+			}			
+			break;
 		case Action.DRAWLINE:
 			if (currentTransition != null && SwingUtilities.isLeftMouseButton(e)) {				
-				State s = getHitState(e.getX(), e.getY());
+				DState s = getHitState(e.getX(), e.getY());
 				if (s == null) {
 					currentTransition = null;					
 				}	else {
-					currentTransition.setEnd(s);					
-					addTransition(currentTransition, JOptionPane.showInputDialog("Symbol to read:"));
+					currentTransition.setEnd(s);
+					try {
+						addTransition(currentTransition, JOptionPane.showInputDialog("Symbol to read:"));
+					} catch(Exception ee) {}
 					currentTransition = null;
 				}
 				new Thread(new UpdateState()).start();
@@ -295,9 +429,9 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 		return;
 	}
 	
-	private State getHitState(int x, int y) {
+	private DState getHitState(int x, int y) {
 		for (int i = 0; i < states.size(); i++) {
-			State s = states.get(i);
+			DState s = states.get(i);
 			if (s.isHit(x, y)) {
 				return s;
 			}
@@ -305,9 +439,9 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 		return null;
 	}
 	
-	private Transition getHitTransition(int x, int y) {
+	private DTransition getHitTransition(int x, int y) {		
 		for (int i = 0; i < transitions.size(); i++) {
-			Transition t = transitions.get(i);
+			DTransition t = transitions.get(i);
 			if (t.isHit(x, y)) {
 				return t;
 			}
@@ -315,10 +449,56 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 		return null;
 	}
 	
+	private int getOppositeTransition(DState start, DState end) {
+		for (int i = 0; i < transitions.size(); i++) {
+			DTransition t = transitions.get(i);
+			if (t.getEnd() == start && t.getStart() == end) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	
+	private void resetAllStartState() {
+		for (int i = 0; i < states.size(); i++) {
+			states.get(i).start = false;
+		}
+	}
+	
 	public class UpdateState implements Runnable {				
-		public void run() {						
+		public void run() {									
 			repaint();			
 		}		
 	}
-		
+	
+	public void updateCurrentState(int curIndex, int prevIndex, String mess) {		
+		DState cur = states.get(curIndex);
+		DState prev = states.get(prevIndex);
+		for (int i = 0; i < states.size(); i++) {
+			states.get(i).current =false;
+		}
+		cur.current = true;		
+		int transIndex = getOppositeTransition(cur, prev);
+		for (int i = 0; i < transitions.size(); i++) {
+			transitions.get(i).current = false;
+		}
+		if (transIndex >= 0) {			
+			transitions.get(transIndex).current = true;			
+		}
+		message = mess;
+		validate();
+    	update(this.getGraphics());
+	}
+	
+	public void reset() {
+		for (int i = 0; i < transitions.size(); i++) {
+			transitions.get(i).current = false;
+		}
+		for (int i = 0; i < states.size(); i++) {
+			states.get(i).current = false;
+		}
+		message = "";
+		validate();
+		update(this.getGraphics());
+	}
 }

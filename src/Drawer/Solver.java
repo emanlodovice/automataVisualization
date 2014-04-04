@@ -10,8 +10,7 @@ public class Solver {
 		return Math.cos(Math.toRadians(angle)) *hype;
 	}
 	
-	public static double solveOpp(double angle, double hype) {		
-		double res = Math.sin(Math.toRadians(angle));		
+	public static double solveOpp(double angle, double hype) {				
 		return Math.sin(Math.toRadians(angle))*hype;
 	}
 	
