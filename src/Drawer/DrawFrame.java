@@ -52,7 +52,7 @@ public class DrawFrame extends JFrame{
 		super("Draw a DFA or NFA");		
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);		
 		handler =  new Listener();
-		setSize(500, 500);	
+		setSize(700, 700);	
 		buts = new ArrayList<JButton>();
 		this.initializeLook();
 		this.addKeyListener(new KeyListener() {

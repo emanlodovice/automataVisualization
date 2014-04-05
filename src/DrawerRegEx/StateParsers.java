@@ -23,7 +23,7 @@ public class StateParsers {
 	private void parseObject(ArrayList<State> s, State start) {
 		Collections.sort(s);
 		for (int i = 0; i < s.size(); i++) {
-			state.add(new DState(distance+=100, 200,i));
+			state.add(new DState(distance+=100, 350,i));
 			if (s.get(i) == start) {
 				state.get(i).start = true;
 			} 

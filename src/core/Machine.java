@@ -25,7 +25,7 @@ public class Machine {
 			this.startingState = m.startingState;
 			this.endingState = m.endingState;
 			this.startingIndex = m.startingIndex;
-			toDFA();
+//			toDFA();
 			status = true;
 		} else {
 			status = false;
@@ -246,18 +246,20 @@ public class Machine {
 	private void fixStringTransitions() {
 		for (int i = 0; i < states.size(); i++) {
 			State s = states.get(i);
-			
-			for	(Transition t : s.transitions) {
+			ArrayList<Transition> toRemove = new ArrayList<>();
+			for	(int j = 0; j < s.transitions.size(); j++) {
+				Transition t = s.transitions.get(j);
 				if (t.symbol.length() > 1) {
 					Machine sg = new Machine(t.symbol, false, false, startingIndex);
 					states.addAll(sg.states);
 					startingIndex = sg.startingIndex;
 					s.transitions.add(new Transition(sg.startingState, "e"));
 					sg.endingState.transitions.add(new Transition(t.destinationState, "e"));
-					s.transitions.remove(t);
+					toRemove.add(t);
 				}
 			}
 			
+			s.transitions.removeAll(toRemove);
 		}
 		
 	}
@@ -335,48 +337,81 @@ public class Machine {
 	}
 	
 	public void feedInput(String input, DrawingArea board) {
-		if (isValidFeed(startingState, input, new ArrayList<State>())) {
-			State currState = startingState;
-			State prevState;
-			ArrayList<State> eStates = new ArrayList<State>();
-			while (!input.equals("") || !currState.isFinalState) {
-				for (Transition t : currState.transitions) {
-					if (t.symbol.equals("e") && !eStates.contains(t.destinationState)) {
-						if (isValidFeed(t.destinationState, input, new ArrayList<State>())) {
-							eStates.add(currState);
-							prevState = currState;
-							currState = t.destinationState;
-							board.updateCurrentState(currState.id, prevState.id, input);
-							try {
-								Thread.sleep(1000);
-							} catch (InterruptedException e) {
-								e.printStackTrace();
+		if (isValidInput(input)) {
+			if (isValidFeed(startingState, input, new ArrayList<State>())) {
+				State currState = startingState;
+				State prevState;
+				ArrayList<Transition> done = new ArrayList<>();
+				while (!input.equals("") || !currState.isFinalState) {
+					for (Transition t : currState.transitions) {
+						if (t.symbol.equals("e") && !done.contains(t)) {
+							if (isValidFeed(t.destinationState, input, new ArrayList<State>())) {
+								done.add(t);
+								prevState = currState;
+								currState = t.destinationState;
+								board.updateCurrentState(currState.id, prevState.id, input);
+								try {
+									Thread.sleep(1000);
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+								break;
 							}
-							break;
-						}
-					} else if (t.symbol.length() <= input.length() && t.symbol.equals(input.substring(0, t.symbol.length()))) {
-						if (isValidFeed(t.destinationState, input.substring(t.symbol.length()), new ArrayList<State>())) {
-							eStates.clear();
-							prevState = currState;
-							currState = t.destinationState;
-							input = input.substring(t.symbol.length());
-							board.updateCurrentState(currState.id, prevState.id, input);
-							try {
-								Thread.sleep(1000);
-							} catch (InterruptedException e) {
-								e.printStackTrace();
+						} else if (t.symbol.equals("e") && done.contains(t) && isValidFeed(t.destinationState, input, new ArrayList<State>())) {
+							boolean noChoice = true;
+							for (Transition tran : currState.transitions) {
+								if ((tran.symbol.equals("e") && isValidFeed(tran.destinationState, input, new ArrayList<State>()) && !done.contains(tran)) ||
+									(tran.symbol.length() <= input.length() && tran.symbol.equals(input.substring(0, tran.symbol.length())) && isValidFeed(tran.destinationState, input.substring(tran.symbol.length()), new ArrayList<State>())) ) {
+									noChoice = false;
+									break;
+								}
 							}
-							break;
+							if (noChoice) {
+								prevState = currState;
+								currState = t.destinationState;
+								board.updateCurrentState(currState.id, prevState.id, input);
+								try {
+									Thread.sleep(1000);
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+								break;
+							}
+						} else if (t.symbol.length() <= input.length() && t.symbol.equals(input.substring(0, t.symbol.length()))) {
+							if (isValidFeed(t.destinationState, input.substring(t.symbol.length()), new ArrayList<State>())) {
+								done.clear();
+								prevState = currState;
+								currState = t.destinationState;
+								input = input.substring(t.symbol.length());
+								board.updateCurrentState(currState.id, prevState.id, input);
+								try {
+									Thread.sleep(1000);
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+								break;
+							}
 						}
 					}
 				}
+				
+				JOptionPane.showMessageDialog(null, "ACCEPTED", "RESULT", JOptionPane.INFORMATION_MESSAGE);
+			} else {
+				tryThenError(startingState, input, new ArrayList<State>(), board);
+				JOptionPane.showMessageDialog(null, "DENIED", "RUSULT", JOptionPane.ERROR_MESSAGE);
 			}
-			
-			JOptionPane.showMessageDialog(null, "ACCEPTED", "RESULT", JOptionPane.INFORMATION_MESSAGE);
 		} else {
-			tryThenError(startingState, input, new ArrayList<State>(), board);
-			JOptionPane.showMessageDialog(null, "DENIED", "RUSULT", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null, "INVALID INPUT STRING", "RUSULT", JOptionPane.ERROR_MESSAGE);
 		}
+	}
+	
+	private boolean isValidInput(String input) {
+		for (int i = 0; i < input.length(); i++) {
+			if (input.charAt(i) != 'a' && input.charAt(i) != 'b') {
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	private boolean isValidFeed(State state, String input, ArrayList<State> eStates) {

@@ -10,5 +10,9 @@ public class Transition {
 		symbol = sym;
 	}
 	
+	@Override
+	public String toString() {
+		return symbol;
+	}
 }
 

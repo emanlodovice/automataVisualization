@@ -47,8 +47,7 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 		Machine regx = new Machine(regEx);
 		transitions = new ArrayList<DTransition>();
 		StateParsers mParsers = new StateParsers(regx.states,this, regx.startingState);
-		states = mParsers.state;		
-//		transitions = mParsers.transitions;
+		states = mParsers.state;
 		repaint();
 	}
 	
@@ -56,7 +55,6 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 		transitions = new ArrayList<DTransition>();
 		StateParsers mParsers = new StateParsers(regx.states,this, regx.startingState);
 		states = mParsers.state;		
-//		transitions = mParsers.transitions;
 		repaint();
 	}
 	
@@ -79,13 +77,13 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 	private void initialize() {
 		message = "";
 		setToolTipText("Click to draw Something");			
-		setPreferredSize(new Dimension(600,600));		
+		setPreferredSize(new Dimension(800,800));		
 		states = new ArrayList<DState>();
 		transitions = new ArrayList<DTransition>();
 		addMouseListener(this);
 		addMouseMotionListener(this);
-		width = 600;
-		height = 600;
+		width = 800;
+		height = 800;
 		toDraw = Action.DRAWSTATE;
 		stateOptions = new JPopupMenu();
 		JPanel menu = new JPanel(new GridLayout(3, 1));
@@ -362,12 +360,12 @@ public class DrawingArea extends JPanel implements MouseInputListener {
 				}
 				addState(currentState);
 				if (currentState.x+RADIUS+100 > width) {
-					width +=50;			
+					width +=100;			
 					setPreferredSize(new Dimension(width, height));
 					this.getParent().revalidate();
 				}
 				if ((currentState.y+RADIUS+100) > height) {					
-					height +=50;
+					height +=100;
 					setPreferredSize(new Dimension(width, height));
 					this.getParent().revalidate();
 				}
